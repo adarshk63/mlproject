@@ -205,13 +205,3 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
-.vscode/
-.thumbnails/
-__pycache__/
-*.png
-*.jpg
-*.jpeg
-*.mp4
-*.zip
-*.rar
-

@@ -1,4 +1,6 @@
 seaborn
 Numpy
 pandas
+xgboost
+catboost
 - e.

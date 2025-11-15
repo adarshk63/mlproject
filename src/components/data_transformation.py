@@ -9,7 +9,6 @@ from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-
 from src.exception import CustomException
 from src.logger import logging
 from src.utils import save_object
@@ -21,23 +20,12 @@ class DataTransformationConfig:
 
 
 class DataTransformation:
-    """
-    Data transformation module tailored for time-series / demand forecasting style notebooks.
-    - Ensures Date column & creates time features.
-    - Creates lag feature prev_<target> using shift(1) (drops NA rows like the notebook).
-    - Builds / fits pipelines and returns transformed arrays ready for training.
-    """
-
+   
     def __init__(self, config: DataTransformationConfig = DataTransformationConfig()):
         self.config = config
 
     def _ensure_date_and_create_time_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Ensure a Date column exists and is datetime. If absent or invalid, create a synthetic daily range.
-        Then create common time features used in the notebook.
-        """
         try:
-            # If Date present, coerce to datetime and fill invalids with synthetic range
             if "Date" in df.columns:
                 df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
                 if df["Date"].isna().any():
@@ -60,10 +48,7 @@ class DataTransformation:
             raise CustomException(e, sys)
 
     def _create_lag_feature(self, df: pd.DataFrame, target_col: str, lag: int = 1) -> pd.DataFrame:
-        """
-        Create a lag feature prev_<target_col> by shifting the target column.
-        Matches the approach in your notebook: df['prev_demand'] = df['Demand Forecast'].shift(1)
-        """
+        
         try:
             lag_col = f"prev_{target_col}"
             df[lag_col] = df[target_col].shift(lag)
@@ -100,11 +85,6 @@ class DataTransformation:
     def get_data_transformer_object(
         self, numerical_columns: List[str], categorical_columns: List[str]
     ) -> ColumnTransformer:
-        """
-        Build ColumnTransformer from provided column lists:
-        - num pipeline: median imputer + StandardScaler
-        - cat pipeline: most_frequent imputer + OneHotEncoder(handle_unknown='ignore') + StandardScaler(with_mean=False)
-        """
         try:
             num_pipeline = Pipeline(
                 steps=[
@@ -140,15 +120,6 @@ class DataTransformation:
         numerical_columns: Optional[List[str]] = None,
         categorical_columns: Optional[List[str]] = None,
     ):
-        """
-        Main entrypoint:
-         - Reads train/test csv files
-         - Ensures Date & creates time features
-         - Creates lag feature prev_<target> (shift(1)) and drops NA (mirrors the notebook behaviour)
-         - Auto-detects or uses provided numeric/categorical columns
-         - Fits preprocessor on training set and transforms both sets
-         - Saves preprocessor to artifacts and returns train_arr, test_arr, preprocessor_path
-        """
         try:
             train_df = pd.read_csv(train_path)
             test_df = pd.read_csv(test_path)
@@ -212,8 +183,6 @@ class DataTransformation:
 
             train_arr = np.c_[X_train_arr, np.array(y_train)]
             test_arr = np.c_[X_test_arr, np.array(y_test)]
-
-            # Save preprocessor
             save_object(file_path=self.config.preprocessor_obj_file_path, obj=preprocessor)
             logging.info(f"Saved preprocessor at: {self.config.preprocessor_obj_file_path}")
 

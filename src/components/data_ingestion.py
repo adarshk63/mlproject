@@ -13,15 +13,14 @@ from src.components.data_transformation import DataTransformationConfig
 
 from src.components.model_trainer import ModelTrainerConfig
 from src.components.model_trainer import ModelTrainer
-@dataclass
-class DataIngestionconfig:
+@dataclass  
+class DataIngestionConfig:
     train_data_path:str=os.path.join('artifacts',"train.csv")
     test_data_path: str= os.path.join('artifacts',"test.csv")
     raw_data_path:str=os.path.join('artifacts',"data.csv")
 
 class DataIngestion: 
-    def __init__(self, ingestion_config: DataIngestionconfig):
-        # ensure attribute is set here
+    def __init__(self, ingestion_config: DataIngestionConfig):
         self.ingestion_config = ingestion_config
     def initiate_data_ingestion(self):
         logging.info("Entered the data ingestion method or component")
@@ -45,15 +44,13 @@ class DataIngestion:
             return(
                 self.ingestion_config.train_data_path,
                 self.ingestion_config.test_data_path
-
             )
         except Exception as e:
             raise CustomException(e,sys)
 if __name__=="__main__":
-    # at the bottom of src/components/data_ingestion.py
-    from src.components.data_ingestion import DataIngestion, DataIngestionconfig
+    from src.components.data_ingestion import DataIngestion, DataIngestionConfig
 
-    cfg = DataIngestionconfig()
+    cfg = DataIngestionConfig()
 
-    obj = DataIngestion(ingestion_config=cfg)   # <-- pass the config here
+    obj = DataIngestion(ingestion_config=cfg)  
     obj.initiate_data_ingestion()

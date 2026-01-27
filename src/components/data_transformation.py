@@ -34,7 +34,6 @@ class DataTransformation:
             else:
                 df["Date"] = pd.date_range(start="2020-01-01", periods=len(df), freq="D")
 
-            # create time features
             df["year"] = df["Date"].dt.year
             df["month"] = df["Date"].dt.month
             df["day"] = df["Date"].dt.day
@@ -59,10 +58,7 @@ class DataTransformation:
     def _detect_column_types(
         self, df: pd.DataFrame, exclude: Optional[List[str]] = None
     ) -> Tuple[List[str], List[str]]:
-        """
-        Infer numerical and categorical columns from dataframe, excluding specified columns.
-        Treats object/category dtype as categorical; numeric dtypes as numerical.
-        """
+       
         try:
             exclude = exclude or []
             cols = [c for c in df.columns if c not in exclude]
@@ -96,7 +92,7 @@ class DataTransformation:
             cat_pipeline = Pipeline(
                 steps=[
                     ("imputer", SimpleImputer(strategy="most_frequent")),
-                    ("one_hot", OneHotEncoder(handle_unknown="ignore", sparse=False)),
+                    ("one_hot", OneHotEncoder(handle_unknown="ignore", sparse_output=True)),
                     ("scaler", StandardScaler(with_mean=False)),
                 ]
             )
@@ -116,18 +112,27 @@ class DataTransformation:
         self,
         train_path: str,
         test_path: str,
-        target_column_name: str = "Demand Forecast",
+        target_column_name: str = "Units Sold",
         numerical_columns: Optional[List[str]] = None,
         categorical_columns: Optional[List[str]] = None,
     ):
         try:
             train_df = pd.read_csv(train_path)
             test_df = pd.read_csv(test_path)
+            drop_cols = ["Demand Forecast", "Competitor Pricing"]
+
+            train_df = train_df.drop(columns=drop_cols, errors="ignore")
+            test_df = test_df.drop(columns=drop_cols, errors="ignore")
+
+            logging.info(f"Dropped columns (if present): {drop_cols}")
 
             logging.info("Read train and test data completed")
+            train_df = train_df.sample(10000, random_state=42)   # fast debug
+            test_df = test_df.sample(2000, random_state=42)
+            logging.info("✅ Debug mode: sampling applied")
 
-            # Ensure date features and lag exist on both train and test (apply same transform)
-            # Important: create lag AFTER target exists in each df; notebook used shift(1) then dropna
+
+            
             train_df = self._ensure_date_and_create_time_features(train_df)
             test_df = self._ensure_date_and_create_time_features(test_df)
 
@@ -136,25 +141,34 @@ class DataTransformation:
             if target_column_name not in test_df.columns:
                 raise ValueError(f"Target column '{target_column_name}' not found in test file.")
 
-            # Create lag feature on each df and drop NA rows (same as notebook)
             train_df = self._create_lag_feature(train_df, target_column_name, lag=1)
             test_df = self._create_lag_feature(test_df, target_column_name, lag=1)
 
-            # Drop rows with NA (first row will have NA after shift)
+        
             train_df.dropna(inplace=True)
             test_df.dropna(inplace=True)
 
             logging.info("Created time features and lag feature; dropped NA rows after lagging.")
+            DROP_FEATURES = ["Product ID"]
+            train_df = train_df.drop(columns=DROP_FEATURES, errors="ignore")
+            test_df = test_df.drop(columns=DROP_FEATURES, errors="ignore")
+            logging.info(f"Dropped high-cardinality features: {DROP_FEATURES}")
 
-            # Determine columns to use for modeling (exclude Date and target)
-            exclude_cols = ["Date", target_column_name]
-            # include the lag column as feature
+            exclude_cols = ["Date", target_column_name,"Demand Forecast", "Competitor Pricing"]
             lag_col = f"prev_{target_column_name}"
             # If user provided lists, use them; otherwise auto-detect
             if numerical_columns is None or categorical_columns is None:
                 auto_num, auto_cat = self._detect_column_types(train_df, exclude=exclude_cols)
                 numerical_columns = numerical_columns or auto_num
                 categorical_columns = categorical_columns or auto_cat
+            HIGH_CARD_COLS = ["Product ID"]  # you can also add "Store ID" if still slow
+            categorical_columns = [c for c in categorical_columns if c not in HIGH_CARD_COLS]
+
+        # also drop them from numeric list if mistakenly added
+            numerical_columns = [c for c in numerical_columns if c not in HIGH_CARD_COLS]
+
+            logging.info(f"Removed high-cardinality columns from encoding: {HIGH_CARD_COLS}")
+
 
             # Ensure lag column is treated as numerical feature (add if not already)
             if lag_col not in numerical_columns and lag_col not in categorical_columns:

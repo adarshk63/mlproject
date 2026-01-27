@@ -11,9 +11,6 @@ st.set_page_config(page_title="Demand Forecasting App", layout="wide")
 st.title("📊 Demand Forecasting (Units Sold Prediction)")
 st.write("Predict **Units Sold** for a specific store-product-date using your trained ML model.")
 
-# -----------------------------------
-# Sidebar Inputs (same as dataset)
-# -----------------------------------
 st.sidebar.header("🔧 Input Features")
 
 date = st.sidebar.date_input("Date")
@@ -75,7 +72,7 @@ prev_units_sold = st.sidebar.number_input(
 col1, col2 = st.columns([1, 1])
 
 with col1:
-    st.subheader("📥 Input Data Preview")
+    st.subheader(" Input Data Preview")
 
     extra_features = {
         "Store ID": store_id,
@@ -102,53 +99,33 @@ with col1:
     input_df = data_obj.get_data_as_data_frame()
     st.dataframe(input_df, use_container_width=True)
 
-with col2:
-    st.subheader("✅ Prediction Result")
 
-    if st.button("Predict Units Sold 🚀", use_container_width=True):
+with col2:
+    st.subheader("Prediction Result")
+
+    # Button 1: Predict Units Sold
+    if st.button("Predict Units Sold ✅", use_container_width=True):
         try:
             pipeline = PredictPipeline(target_column_name="Units Sold")
             preds = pipeline.predict(input_df)
 
             prediction = float(preds[0])
 
+            # store prediction
+            st.session_state["prediction"] = prediction
+
             st.success(f"📌 Predicted Units Sold on {date}: **{prediction:.2f}** units")
 
         except Exception as e:
             st.error(f"❌ Error: {str(e)}")
 
+ 
+    if st.button("Calculate Revenue 💰", use_container_width=True):
+        if "prediction" not in st.session_state:
+            st.warning("⚠️ First click 'Predict Units Sold' button.")
+        else:
+            revenue = st.session_state["prediction"] * float(price)
+            st.info(f"💰 Predicted Revenue on {date}: **₹{revenue:,.2f}**")
+   
 
-# -----------------------------------
-# Optional: CSV Upload (for checking row)
-# -----------------------------------
-st.markdown("---")
-st.subheader("📂 Optional: Upload CSV for single-row prediction (same dataset format)")
-
-uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
-
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
-
-    st.write("Preview uploaded dataset:")
-    st.dataframe(df.head(), use_container_width=True)
-
-    st.info("Select 1 row from your dataset to predict.")
-
-    row_index = st.number_input("Row Index", min_value=0, max_value=len(df)-1, value=0, step=1)
-
-    selected_row = df.iloc[[row_index]].copy()
-
-    # Create prev_Units Sold automatically if Units Sold exists
-    if "Units Sold" in df.columns:
-        selected_row["prev_Units Sold"] = df["Units Sold"].shift(1).fillna(method="bfill").iloc[row_index]
-
-    st.write("Selected row input:")
-    st.dataframe(selected_row, use_container_width=True)
-
-    if st.button("Predict for Selected Row ✅"):
-        try:
-            pipeline = PredictPipeline(target_column_name="Units Sold")
-            preds = pipeline.predict(selected_row)
-            st.success(f"✅ Predicted Units Sold: **{float(preds[0]):.2f}**")
-        except Exception as e:
-            st.error(str(e))
+   

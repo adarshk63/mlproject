@@ -1,10 +1,5 @@
 pandas
 numpy
-seaborn
-matplotlib
-catboost
-xgboost
-Flask
 streamlit
 dill
 scikit-learn==1.5.1

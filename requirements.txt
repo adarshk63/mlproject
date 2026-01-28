@@ -1,5 +1,5 @@
 pandas
 numpy
 streamlit
-dill
+dill==0.3.8
 scikit-learn==1.5.1
